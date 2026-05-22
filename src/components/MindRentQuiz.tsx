@@ -141,7 +141,7 @@ function HeroHeadline({ text }: { text: string }) {
   return (
     <h2
       key={text}
-      className="hero-headline hero-copy-fade max-w-3xl text-5xl font-black lowercase leading-[0.92] sm:text-7xl"
+      className="hero-headline hero-copy-fade max-w-3xl text-4xl font-black lowercase leading-[0.92] sm:text-7xl"
     >
       {heroWords.map((word, index) => (
         <span
@@ -344,15 +344,15 @@ function QuizCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -18, scale: 0.98 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="glass relative z-10 rounded-[3rem] p-5 sm:p-7 lg:rounded-[4rem]"
+      className="glass relative z-10 rounded-[2.2rem] p-4 sm:rounded-[3rem] sm:p-7 lg:rounded-[4rem]"
     >
-      <div className="rounded-[2.5rem] border border-brand-purple/15 bg-brand-lavender-light/55 p-5 sm:p-7">
+      <div className="rounded-[1.8rem] border border-brand-purple/15 bg-brand-lavender-light/55 p-4 sm:rounded-[2.5rem] sm:p-7">
         <div className="mb-8 flex items-start justify-between gap-5">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-black lowercase tracking-[0.2em]">
               step {question.step} of {MAX_QUESTIONS}
             </p>
-            <h1 className="mt-3 text-4xl font-black lowercase leading-[0.95] sm:text-5xl">
+            <h1 className="mt-3 text-3xl font-black lowercase leading-[0.98] sm:text-5xl">
               {question.question}
             </h1>
           </div>
@@ -454,8 +454,8 @@ function ProductCarousel({
   }
 
   return (
-    <section className="rounded-[2.6rem] border border-brand-purple/15 bg-white/35 p-5 sm:p-6">
-      <div className="flex items-center justify-between gap-4">
+    <section className="rounded-[2rem] border border-brand-purple/15 bg-white/35 p-4 sm:rounded-[2.6rem] sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-black lowercase tracking-[0.18em]">
             add something soft
@@ -497,7 +497,7 @@ function ProductCarousel({
           return (
             <article
               key={product.id}
-              className="min-w-[16.5rem] snap-start rounded-[2rem] border border-brand-purple/15 bg-brand-lavender-light/60 p-5 shadow-[0_16px_38px_rgba(49,34,79,0.12)] sm:min-w-[18rem]"
+              className="min-w-[15.5rem] snap-start rounded-[2rem] border border-brand-purple/15 bg-brand-lavender-light/60 p-5 shadow-[0_16px_38px_rgba(49,34,79,0.12)] sm:min-w-[18rem]"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="grid h-12 min-w-12 place-items-center rounded-[1.2rem] border border-brand-purple/15 bg-white/45 px-2 text-[0.62rem] font-black lowercase tracking-[0.1em]">
@@ -569,18 +569,18 @@ function ProductReveal({
     <motion.section
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="glass relative z-10 w-full rounded-[3rem] p-5 sm:p-7 lg:rounded-[4rem]"
+      className="glass relative z-10 w-full rounded-[2.2rem] p-4 sm:rounded-[3rem] sm:p-7 lg:rounded-[4rem]"
     >
       <div className="grid gap-5 xl:grid-cols-[0.9fr_1.25fr]">
-        <div className="rounded-[2.6rem] border border-brand-purple/15 bg-brand-lavender-light/55 p-5 sm:p-6">
-          <div className="grid items-center gap-6 sm:grid-cols-[11rem_1fr]">
+        <div className="rounded-[2rem] border border-brand-purple/15 bg-brand-lavender-light/55 p-4 sm:rounded-[2.6rem] sm:p-6">
+          <div className="grid items-center gap-6 md:grid-cols-[11rem_1fr]">
             <KitAssemblyBox products={products} lastDroppedId={lastDroppedId} />
 
             <div>
               <p className="text-sm font-black lowercase tracking-[0.2em]">
                 your ai recommendation
               </p>
-              <h2 className="mt-3 text-4xl font-black lowercase leading-none sm:text-5xl">
+              <h2 className="mt-3 text-3xl font-black lowercase leading-none sm:text-5xl">
                 {result.kit} kit
               </h2>
               <p className="mt-4 text-base font-semibold leading-7 sm:text-lg">
@@ -590,7 +590,7 @@ function ProductReveal({
           </div>
         </div>
 
-        <div className="rounded-[2.6rem] border border-brand-purple/15 bg-white/35 p-5 sm:p-6">
+        <div className="rounded-[2rem] border border-brand-purple/15 bg-white/35 p-4 sm:rounded-[2.6rem] sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-black lowercase tracking-[0.2em]">
@@ -600,7 +600,7 @@ function ProductReveal({
                 edit your reset
               </h3>
             </div>
-            <div className="rounded-full bg-brand-purple px-5 py-3 text-xl font-black text-brand-lavender-light">
+            <div className="w-fit rounded-full bg-brand-purple px-5 py-3 text-lg font-black text-brand-lavender-light sm:text-xl">
               {formatPrice(total)}
             </div>
           </div>
@@ -611,7 +611,7 @@ function ProductReveal({
                 key={product.id}
                 className="flex items-start gap-3 rounded-[1.7rem] border border-brand-purple/15 bg-brand-lavender-light/55 p-4"
               >
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <p className="font-black lowercase">{product.name}</p>
                   <p className="mt-1 text-sm font-semibold leading-6 opacity-80">
                     {product.reason}
@@ -650,7 +650,7 @@ function ProductReveal({
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_0.86fr]">
         <div className="hidden xl:block" />
-        <div className="rounded-[2.6rem] bg-brand-purple p-5 text-brand-lavender-light sm:p-6">
+        <div className="rounded-[2rem] bg-brand-purple p-5 text-brand-lavender-light sm:rounded-[2.6rem] sm:p-6">
           <p className="text-sm font-black lowercase tracking-[0.2em]">
             one-time checkout
           </p>
@@ -745,9 +745,9 @@ export function MindRentQuiz({ firstQuestion }: MindRentQuizProps) {
       <GrainOverlay />
       <BrainProgress progress={progress} />
 
-      <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-12">
-        <nav className="glass z-10 flex items-center justify-between gap-3 rounded-[2rem] px-4 py-3 sm:px-5">
-          <div className="flex items-center gap-3">
+      <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-8 sm:py-6 lg:px-12">
+        <nav className="glass z-10 flex flex-wrap items-center justify-between gap-3 rounded-[1.6rem] px-4 py-3 sm:rounded-[2rem] sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
             <Image
               src="/mindrent-logo.jpeg"
               alt="mindrent logo"
@@ -763,7 +763,7 @@ export function MindRentQuiz({ firstQuestion }: MindRentQuizProps) {
               <TimeGreeting />
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Link
               href="/shop"
               className="rounded-full border border-brand-purple/15 bg-white/35 px-4 py-2 text-sm font-black lowercase transition hover:bg-brand-purple hover:text-brand-lavender-light"
@@ -785,13 +785,13 @@ export function MindRentQuiz({ firstQuestion }: MindRentQuizProps) {
             </AnimatePresence>
           </div>
         ) : (
-          <div className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[0.88fr_1.12fr] lg:py-16">
+          <div className="grid flex-1 items-center gap-8 py-8 lg:grid-cols-[0.88fr_1.12fr] lg:py-16">
             <motion.div
               className="relative z-10 space-y-6"
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="glass rounded-[3.25rem] px-7 py-9 sm:px-10 sm:py-12 lg:rounded-[4.5rem]">
+              <div className="glass rounded-[2.4rem] px-6 py-8 sm:rounded-[3.25rem] sm:px-10 sm:py-12 lg:rounded-[4.5rem]">
                 <p className="mb-5 text-sm font-black lowercase tracking-[0.22em]">
                   ai-guided, one reset at a time
                 </p>

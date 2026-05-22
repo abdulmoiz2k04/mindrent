@@ -38,9 +38,9 @@ export default function TodayPage() {
         <span className="ambient-particle ambient-particle-two" />
       </div>
 
-      <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6 sm:px-8 lg:px-12">
-        <nav className="glass flex items-center justify-between gap-3 rounded-[2rem] px-4 py-3 sm:px-5">
-          <Link href="/" className="flex items-center gap-3">
+      <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-5 sm:px-8 sm:py-6 lg:px-12">
+        <nav className="glass flex flex-wrap items-center justify-between gap-3 rounded-[1.6rem] px-4 py-3 sm:rounded-[2rem] sm:px-5">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
             <Image
               src="/mindrent-logo.jpeg"
               alt="mindrent logo"
@@ -69,7 +69,7 @@ export default function TodayPage() {
             <p className="text-sm font-black lowercase tracking-[0.22em] opacity-70">
               anonymous mood weather
             </p>
-            <h1 className="mt-4 max-w-3xl text-5xl font-black lowercase leading-[0.92] sm:text-7xl">
+            <h1 className="mt-4 max-w-3xl text-4xl font-black lowercase leading-[0.92] sm:text-7xl">
               what mindrent is holding today
             </h1>
 

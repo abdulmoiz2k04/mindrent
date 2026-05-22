@@ -51,7 +51,7 @@ export default function ShopPage() {
   }, [activeFilter]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-brand-lavender px-5 py-6 text-brand-purple sm:px-8 lg:px-12">
+    <main className="relative min-h-screen overflow-hidden bg-brand-lavender px-4 py-5 text-brand-purple sm:px-8 sm:py-6 lg:px-12">
       <div aria-hidden="true" className="ambient-background">
         <span className="ambient-blob ambient-blob-one" />
         <span className="ambient-blob ambient-blob-two" />
@@ -60,8 +60,8 @@ export default function ShopPage() {
       </div>
 
       <section className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-7">
-        <nav className="glass flex items-center justify-between gap-3 rounded-[2rem] px-4 py-3 sm:px-5">
-          <Link href="/" className="flex items-center gap-3">
+        <nav className="glass flex flex-wrap items-center justify-between gap-3 rounded-[1.6rem] px-4 py-3 sm:rounded-[2rem] sm:px-5">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
             <Image
               src="/mindrent-logo.jpeg"
               alt="mindrent logo"
@@ -77,7 +77,7 @@ export default function ShopPage() {
               <TimeGreeting />
             </div>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Link
               href="/"
               className="rounded-full border border-brand-purple/15 bg-white/35 px-4 py-2 text-sm font-black lowercase transition hover:bg-brand-purple hover:text-brand-lavender-light"
@@ -95,7 +95,7 @@ export default function ShopPage() {
             <p className="text-sm font-black lowercase tracking-[0.22em]">
               build your box directly
             </p>
-            <h1 className="mt-4 max-w-2xl text-5xl font-black lowercase leading-[0.92] sm:text-7xl">
+            <h1 className="mt-4 max-w-2xl text-4xl font-black lowercase leading-[0.92] sm:text-7xl">
               shop calm without the quiz.
             </h1>
           </div>

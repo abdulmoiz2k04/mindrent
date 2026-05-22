@@ -6,7 +6,7 @@ export default function NotFound() {
       <div aria-hidden="true" className="breathing-circle" />
 
       <section className="relative z-10 max-w-3xl">
-        <h1 className="text-5xl font-black lowercase leading-[0.92] sm:text-7xl">
+        <h1 className="text-4xl font-black lowercase leading-[0.92] sm:text-7xl">
           this page doesn&apos;t exist. but you do.
         </h1>
         <p className="mx-auto mt-6 max-w-xl text-lg font-semibold lowercase leading-8 opacity-75">

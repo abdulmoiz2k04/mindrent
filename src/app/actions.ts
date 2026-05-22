@@ -155,12 +155,129 @@ const firstQuestion: QuizQuestion = {
   answers: ["heavy and noisy", "scattered but manageable", "quietly okay"],
 };
 
+const curatedQuestions: Record<
+  Branch,
+  Array<Omit<QuizQuestion, "id" | "step" | "branch">>
+> = {
+  stress: [
+    {
+      inputMode: "priority",
+      question: "where does the pressure show up most clearly?",
+      answers: ["racing thoughts", "body tension", "restless sleep"],
+    },
+    {
+      inputMode: "slider",
+      question: "what would make tonight feel easier?",
+      answers: ["less overthinking", "a quieter body", "a small ritual"],
+    },
+    {
+      inputMode: "priority",
+      question: "what kind of calm would actually reach you?",
+      answers: ["something grounding", "something sensory", "something sleep-friendly"],
+    },
+    {
+      inputMode: "slider",
+      question: "what feels hardest to put down right now?",
+      answers: ["mental noise", "emotional load", "body stress"],
+    },
+  ],
+  productivity: [
+    {
+      inputMode: "priority",
+      question: "what steals your focus most often?",
+      answers: ["too many tasks", "phone checking", "low momentum"],
+    },
+    {
+      inputMode: "slider",
+      question: "what would help you start without forcing it?",
+      answers: ["tiny next steps", "a visible timer", "less desk clutter"],
+    },
+    {
+      inputMode: "priority",
+      question: "when work feels sticky, what do you need first?",
+      answers: ["clear priorities", "less distraction", "energy support"],
+    },
+    {
+      inputMode: "slider",
+      question: "what would make your next task feel lighter?",
+      answers: ["structure", "focus cues", "a reset break"],
+    },
+  ],
+  selfCare: [
+    {
+      inputMode: "priority",
+      question: "what kind of care feels easiest to accept?",
+      answers: ["something restful", "something comforting", "something reflective"],
+    },
+    {
+      inputMode: "slider",
+      question: "where does your energy feel most depleted?",
+      answers: ["my body", "my mood", "my patience"],
+    },
+    {
+      inputMode: "priority",
+      question: "what would feel like being looked after?",
+      answers: ["warmth", "soft routine", "a kind reminder"],
+    },
+    {
+      inputMode: "slider",
+      question: "what part of you needs replenishing first?",
+      answers: ["rest", "self-kindness", "connection"],
+    },
+  ],
+};
+
 function stableId(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 42);
+}
+
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isBranch(value: unknown): value is Branch {
+  return (
+    value === "stress" || value === "productivity" || value === "selfCare"
+  );
+}
+
+function usedQuestionTexts(transcript: QuizAnswer[]) {
+  return new Set(
+    [firstQuestion.question, ...transcript.map((item) => item.question)].map(
+      normalizeText,
+    ),
+  );
+}
+
+function hasDuplicateQuestion(question: string, transcript: QuizAnswer[]) {
+  return usedQuestionTexts(transcript).has(normalizeText(question));
+}
+
+function isCleanAnswerSet(
+  answers: unknown,
+): answers is [string, string, string] {
+  if (!Array.isArray(answers) || answers.length < 3) {
+    return false;
+  }
+
+  const cleanAnswers = answers
+    .slice(0, 3)
+    .filter(
+      (answer): answer is string =>
+        typeof answer === "string" &&
+        answer.trim().length >= 3 &&
+        answer.trim().length <= 42,
+    );
+  const uniqueAnswers = new Set(cleanAnswers.map(normalizeText));
+
+  return cleanAnswers.length === 3 && uniqueAnswers.size === 3;
 }
 
 function inferBranch(transcript: QuizAnswer[]): Branch {
@@ -263,25 +380,36 @@ function normalizeQuestion(
   value: Partial<QuizQuestion> | null,
   transcript: QuizAnswer[],
 ): QuizQuestion {
-  const branch = value?.branch ?? inferBranch(transcript);
   const step = Math.min(transcript.length + 1, MAX_QUESTIONS);
-  const answers = Array.isArray(value?.answers)
-    ? value.answers.slice(0, 3)
-    : fallbackQuestion(transcript).answers;
+  const branch = isBranch(value?.branch) ? value.branch : inferBranch(transcript);
+  const fallback = fallbackQuestion(transcript);
+  const question =
+    typeof value?.question === "string" ? value.question.trim() : "";
 
-  while (answers.length < 3) {
-    answers.push(fallbackQuestion(transcript).answers[answers.length]);
+  if (
+    question.length < 12 ||
+    hasDuplicateQuestion(question, transcript) ||
+    !isCleanAnswerSet(value?.answers)
+  ) {
+    logDev("question fallback used", {
+      reason: "invalid, repeated, or weak ai question/options",
+      aiQuestion: value,
+      fallback,
+    });
+    return fallback;
   }
 
   return {
-    id: value?.id ?? `${branch}-${step}`,
+    id: value?.id ?? `${branch}-${step}-${stableId(question)}`,
     step,
-    question:
-      value?.question ??
-      "what would feel most relieving to change in the next twenty-four hours?",
+    question,
     branch,
     inputMode: value?.inputMode === "priority" ? "priority" : "slider",
-    answers: answers as [string, string, string],
+    answers: value.answers.map((answer) => answer.trim()) as [
+      string,
+      string,
+      string,
+    ],
   };
 }
 
@@ -320,34 +448,24 @@ function normalizeResult(
 function fallbackQuestion(transcript: QuizAnswer[]): QuizQuestion {
   const branch = inferBranch(transcript);
   const step = Math.min(transcript.length + 1, MAX_QUESTIONS);
-  const branchCopy: Record<Branch, QuizQuestion> = {
-    stress: {
-      id: `stress-${step}`,
-      step,
-      branch,
-      inputMode: step % 2 === 0 ? "priority" : "slider",
-      question: "where does the pressure usually land first?",
-      answers: ["in my thoughts", "in my body", "in my sleep"],
-    },
-    productivity: {
-      id: `focus-${step}`,
-      step,
-      branch,
-      inputMode: step % 2 === 0 ? "priority" : "slider",
-      question: "what most often breaks your focus?",
-      answers: ["too many tasks", "phone checking", "low energy"],
-    },
-    selfCare: {
-      id: `care-${step}`,
-      step,
-      branch,
-      inputMode: step % 2 === 0 ? "priority" : "slider",
-      question: "what kind of care feels easiest to accept right now?",
-      answers: ["something physical", "something reflective", "something restful"],
-    },
-  };
+  const usedQuestions = usedQuestionTexts(transcript);
+  const template =
+    curatedQuestions[branch].find(
+      (question) => !usedQuestions.has(normalizeText(question.question)),
+    ) ??
+    Object.values(curatedQuestions)
+      .flat()
+      .find((question) => !usedQuestions.has(normalizeText(question.question))) ??
+    curatedQuestions[branch][0];
 
-  return branchCopy[branch];
+  return {
+    id: `${branch}-${step}-${stableId(template.question)}`,
+    step,
+    branch,
+    inputMode: template.inputMode,
+    question: template.question,
+    answers: template.answers,
+  };
 }
 
 function fallbackResult(transcript: QuizAnswer[]): QuizResult {
@@ -445,10 +563,16 @@ function buildQuestionPrompt(transcript: QuizAnswer[], sessionId: string) {
     .update(sessionId)
     .digest("hex")
     .slice(0, 16);
+  const branch = inferBranch(transcript);
+  const forbiddenQuestions = [
+    firstQuestion.question,
+    ...transcript.map((item) => item.question),
+  ];
 
   return `You are MindRent's careful onboarding psychologist and product curator.
 Do not diagnose. Do not mention therapy replacement. Use lowercase, warm language.
 The user's session is pseudonymous: ${pseudonymousSession}.
+The current strongest signal is: ${branch}.
 
 Branch rules:
 - Path A Stress tendency: choose this if answers mention pressure, overthinking, nighttime rumination, body tension, panic, or emotional load.
@@ -456,6 +580,16 @@ Branch rules:
 - Path C Self-care needs: choose this if answers mention low energy, loneliness, rest, sleep, self-kindness, burnout, or needing gentle rituals.
 
 The quiz has a strict maximum of ${MAX_QUESTIONS} questions. The first question was hardcoded by the app. Generate only the next question.
+Hard rules:
+- Never repeat, rephrase, or closely mirror any forbidden question.
+- The answer choices must directly answer the exact question being asked.
+- Each answer choice must be concrete, emotionally useful, and distinct.
+- Do not return generic choices like "yes", "no", "maybe", "not sure", "all of the above", or unrelated product names.
+- Use the transcript to ask about the next missing dimension: body, thoughts, energy, sleep, focus friction, emotional load, or care preference.
+
+Forbidden questions:
+${forbiddenQuestions.map((question) => `- ${question}`).join("\n")}
+
 Return JSON only:
 {
   "id": "short-kebab-id",
@@ -476,9 +610,19 @@ function buildResultPrompt(transcript: QuizAnswer[], sessionId: string) {
     .update(sessionId)
     .digest("hex")
     .slice(0, 16);
+  const scored = scoreTranscript(transcript);
 
   return `The user's session is pseudonymous: ${pseudonymousSession}.
 Analyze these 5 quiz answers and recommend one kit. Treat answer text and slider scores as signals, but make the final decision from the whole pattern.
+Rule-based signal scores are provided as a second opinion, not a command. If the transcript clearly says otherwise, explain that clearly and choose the better kit.
+
+Rule-based signal scores:
+${JSON.stringify(scored.scores, null, 2)}
+
+Available product themes:
+- Basic/calm: breathing stone, guided journal, night reset tea, weighted eye pillow, calming candle.
+- Focus: focus prompt cards, soft desk timer, guided journal, breathing stone, night reset tea.
+- Gift/self-care: calming candle, gratitude notes, weighted eye pillow, night reset tea, guided journal, breathing stone.
 
 Transcript:
 ${JSON.stringify(transcript, null, 2)}`;

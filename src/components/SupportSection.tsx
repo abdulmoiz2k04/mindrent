@@ -55,8 +55,8 @@ export function SupportSection({ compact = false }: { compact?: boolean }) {
     <section
       className={
         compact
-          ? "rounded-[2.6rem] border border-brand-purple/15 bg-white/35 p-5 sm:p-6"
-          : "glass rounded-[3.2rem] p-6 sm:p-9 lg:rounded-[4.2rem]"
+          ? "rounded-[2rem] border border-brand-purple/15 bg-white/35 p-4 sm:rounded-[2.6rem] sm:p-6"
+          : "glass rounded-[2.4rem] p-5 sm:rounded-[3.2rem] sm:p-9 lg:rounded-[4.2rem]"
       }
     >
       <div
@@ -71,7 +71,7 @@ export function SupportSection({ compact = false }: { compact?: boolean }) {
             className={
               compact
                 ? "text-3xl font-black lowercase leading-none sm:text-4xl"
-                : "text-5xl font-black lowercase leading-[0.92] sm:text-7xl"
+                : "text-4xl font-black lowercase leading-[0.92] sm:text-7xl"
             }
           >
             need to talk to someone?
