@@ -1,9 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { AnimatePresence, Reorder, motion } from "motion/react";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { continueQuiz } from "@/app/actions";
+import { AppFooter } from "@/components/AppFooter";
+import { SupportSection } from "@/components/SupportSection";
+import { TimeGreeting } from "@/components/TimeGreeting";
 import {
   MAX_QUESTIONS,
   type KitProduct,
@@ -11,10 +15,10 @@ import {
   type QuizQuestion,
   type QuizResult,
 } from "@/lib/quiz-types";
+import { shopProducts, type ShopProduct } from "@/lib/shop-products";
 
 type MindRentQuizProps = {
   firstQuestion: QuizQuestion;
-  addOns: KitProduct[];
 };
 
 const kitBasePrices = {
@@ -23,12 +27,157 @@ const kitBasePrices = {
   Gift: 6200,
 };
 
+const moodStates = [
+  "scattered",
+  "overstimulated",
+  "quietly tired",
+  "carrying too much",
+  "almost okay",
+  "softly rebooting",
+  "too many tabs open",
+  "needing a pause",
+];
+
+const firstVisitHero = {
+  headline: "a box that listens before it arrives.",
+  body: "answer five gentle prompts. mindrent ai branches toward stress, focus, or self-care, then builds a one-time wellness kit around what your day is actually asking for.",
+};
+
+const returningHero = {
+  headline: "welcome back. ready for another reset?",
+  body: "your answers are private. your next kit is waiting.",
+};
+
+const proofNotes = [
+  {
+    quote: "got my calm kit on a tuesday. actually helped.",
+    byline: "zara, lahore",
+  },
+  {
+    quote: "felt oddly seen by a tiny box of things.",
+    byline: "hamza, islamabad",
+  },
+  {
+    quote: "less dramatic than therapy. still very useful.",
+    byline: "mariam, karachi",
+  },
+];
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat("en-PK", {
     style: "currency",
     currency: "PKR",
     maximumFractionDigits: 0,
   }).format(price);
+}
+
+function productKeys(product: Pick<KitProduct, "id" | "name">) {
+  return [product.id.toLowerCase(), product.name.toLowerCase()];
+}
+
+function shopProductToKitProduct(product: ShopProduct): KitProduct {
+  return {
+    id: product.id,
+    name: product.name,
+    reason: product.description,
+    price: product.price,
+  };
+}
+
+function AmbientBackground() {
+  return (
+    <div aria-hidden="true" className="ambient-background">
+      <span className="ambient-blob ambient-blob-one" />
+      <span className="ambient-blob ambient-blob-two" />
+      <span className="ambient-blob ambient-blob-three" />
+      <span className="ambient-particle ambient-particle-one" />
+      <span className="ambient-particle ambient-particle-two" />
+      <span className="ambient-particle ambient-particle-three" />
+      <span className="ambient-particle ambient-particle-four" />
+    </div>
+  );
+}
+
+function GrainOverlay() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-[1] h-full w-full opacity-[0.18] mix-blend-multiply"
+    >
+      <filter id="mindrent-grain">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.72"
+          numOctaves="3"
+          seed="11"
+        />
+        <feColorMatrix type="saturate" values="0" />
+        <feComponentTransfer>
+          <feFuncA type="table" tableValues="0 0.22" />
+        </feComponentTransfer>
+      </filter>
+      <rect width="100%" height="100%" filter="url(#mindrent-grain)" />
+    </svg>
+  );
+}
+
+function MoodTicker() {
+  const tickerText = moodStates.join(" · ");
+
+  return (
+    <div className="mood-ticker relative z-10 mt-4 overflow-hidden rounded-full border border-brand-purple/15 bg-white/25 py-3 font-mono text-[0.68rem] font-bold lowercase tracking-[0.24em] text-brand-purple/70 backdrop-blur-xl">
+      <div className="mood-ticker-track flex w-max items-center gap-8 whitespace-nowrap">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <span key={index}>{tickerText}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeroHeadline({ text }: { text: string }) {
+  const heroWords = text.split(" ");
+
+  return (
+    <h2
+      key={text}
+      className="hero-headline hero-copy-fade max-w-3xl text-5xl font-black lowercase leading-[0.92] sm:text-7xl"
+    >
+      {heroWords.map((word, index) => (
+        <span
+          key={`${word}-${index}`}
+          className="hero-word"
+          style={{ animationDelay: `${220 + index * 135}ms` }}
+        >
+          {word}
+        </span>
+      ))}
+    </h2>
+  );
+}
+
+function ProofCards() {
+  return (
+    <section
+      aria-label="customer notes"
+      className="relative z-10 grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3"
+    >
+      {proofNotes.map((note, index) => (
+        <figure
+          key={note.quote}
+          className="proof-card glass rounded-[2rem] px-5 py-5"
+          style={{ animationDelay: `${index * 0.7}s` }}
+        >
+          <blockquote className="text-sm font-semibold italic leading-6 lowercase sm:text-base">
+            &ldquo;{note.quote}&rdquo;
+          </blockquote>
+          <figcaption className="mt-4 text-[0.68rem] font-black lowercase tracking-[0.2em] opacity-65">
+            {note.byline}
+          </figcaption>
+        </figure>
+      ))}
+    </section>
+  );
 }
 
 function BrainProgress({ progress }: { progress: number }) {
@@ -238,18 +387,171 @@ function QuizCard({
   );
 }
 
+function KitAssemblyBox({
+  products,
+  lastDroppedId,
+}: {
+  products: KitProduct[];
+  lastDroppedId: string | null;
+}) {
+  return (
+    <div className="kit-assembly mx-auto">
+      <div className="kit-drop-zone" aria-hidden="true">
+        {products.slice(0, 7).map((product, index) => (
+          <span
+            key={`${product.id}-${index}`}
+            className={
+              product.id === lastDroppedId
+                ? "kit-drop-item kit-drop-item-new"
+                : "kit-drop-item"
+            }
+            style={{
+              animationDelay:
+                product.id === lastDroppedId ? "0ms" : `${index * 150}ms`,
+              left: `${18 + (index % 4) * 16}%`,
+              bottom: `${30 + Math.floor(index / 4) * 16}%`,
+            }}
+          >
+            {product.name.split(" ")[0]}
+          </span>
+        ))}
+      </div>
+      <div className="kit-box-lid" />
+      <div className="kit-box-body">
+        <span>{products.length} soft things</span>
+      </div>
+    </div>
+  );
+}
+
+function ProductCarousel({
+  products,
+  onAdd,
+  initialKitKeys,
+}: {
+  products: KitProduct[];
+  onAdd: (product: KitProduct) => void;
+  initialKitKeys: Set<string>;
+}) {
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const currentProductKeys = useMemo(
+    () => new Set(products.flatMap((product) => productKeys(product))),
+    [products],
+  );
+  const carouselProducts = shopProducts.filter(
+    (product) => productKeys(product).every((key) => !initialKitKeys.has(key)),
+  );
+
+  function scrollCarousel(direction: -1 | 1) {
+    carouselRef.current?.scrollBy({
+      left: direction * 340,
+      behavior: "smooth",
+    });
+  }
+
+  if (carouselProducts.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-[2.6rem] border border-brand-purple/15 bg-white/35 p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-black lowercase tracking-[0.18em]">
+            add something soft
+          </p>
+          <h3 className="mt-2 text-2xl font-black lowercase sm:text-3xl">
+            you might also like
+          </h3>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() => scrollCarousel(-1)}
+            className="grid h-11 w-11 place-items-center rounded-full border border-brand-purple/20 bg-white/45 text-lg font-black transition hover:bg-brand-purple hover:text-brand-lavender-light"
+            aria-label="scroll recommendations left"
+          >
+            &larr;
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollCarousel(1)}
+            className="grid h-11 w-11 place-items-center rounded-full border border-brand-purple/20 bg-white/45 text-lg font-black transition hover:bg-brand-purple hover:text-brand-lavender-light"
+            aria-label="scroll recommendations right"
+          >
+            &rarr;
+          </button>
+        </div>
+      </div>
+
+      <div
+        ref={carouselRef}
+        className="carousel-scroll mt-5 flex gap-4 overflow-x-auto pb-3"
+      >
+        {carouselProducts.map((product) => {
+          const added = productKeys(product).some((key) =>
+            currentProductKeys.has(key),
+          );
+          const kitProduct = shopProductToKitProduct(product);
+
+          return (
+            <article
+              key={product.id}
+              className="min-w-[16.5rem] snap-start rounded-[2rem] border border-brand-purple/15 bg-brand-lavender-light/60 p-5 shadow-[0_16px_38px_rgba(49,34,79,0.12)] sm:min-w-[18rem]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className="grid h-12 min-w-12 place-items-center rounded-[1.2rem] border border-brand-purple/15 bg-white/45 px-2 text-[0.62rem] font-black lowercase tracking-[0.1em]">
+                  {product.icon}
+                </span>
+                <span className="rounded-full border border-brand-purple/15 px-3 py-1 text-[0.62rem] font-black lowercase tracking-[0.16em] opacity-70">
+                  {product.category}
+                </span>
+              </div>
+
+              <h4 className="mt-5 text-xl font-black lowercase leading-none">
+                {product.name}
+              </h4>
+              <p className="mt-3 min-h-20 text-sm font-semibold leading-6 lowercase opacity-80">
+                {product.description}
+              </p>
+
+              <div className="mt-5 flex items-center justify-between gap-3">
+                <p className="text-base font-black">
+                  {formatPrice(product.price)}
+                </p>
+                <button
+                  type="button"
+                  disabled={added}
+                  onClick={() => onAdd(kitProduct)}
+                  className={
+                    added
+                      ? "rounded-full border border-brand-purple/15 bg-white/45 px-4 py-2 text-sm font-black lowercase opacity-70"
+                      : "rounded-full bg-brand-purple px-4 py-2 text-sm font-black lowercase text-brand-lavender-light shadow-[0_14px_30px_rgba(49,34,79,0.2)] transition hover:-translate-y-0.5"
+                  }
+                >
+                  {added ? <>&#10003; added</> : "+ add"}
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function ProductReveal({
   result,
-  addOns,
 }: {
   result: QuizResult;
-  addOns: KitProduct[];
 }) {
   const [products, setProducts] = useState(result.products);
   const [method, setMethod] = useState<"easypaisa" | "jazzcash">("easypaisa");
+  const [lastDroppedId, setLastDroppedId] = useState<string | null>(null);
 
-  const availableAddOns = addOns.filter(
-    (item) => !products.some((product) => product.id === item.id),
+  const initialKitKeys = useMemo(
+    () => new Set(result.products.flatMap((product) => productKeys(product))),
+    [result.products],
   );
   const total = useMemo(
     () =>
@@ -257,6 +559,11 @@ function ProductReveal({
       products.reduce((sum, product) => sum + product.price, 0),
     [products, result.kit],
   );
+
+  function addProductToKit(product: KitProduct) {
+    setProducts((current) => [...current, product]);
+    setLastDroppedId(product.id);
+  }
 
   return (
     <motion.section
@@ -267,38 +574,7 @@ function ProductReveal({
       <div className="grid gap-5 xl:grid-cols-[0.9fr_1.25fr]">
         <div className="rounded-[2.6rem] border border-brand-purple/15 bg-brand-lavender-light/55 p-5 sm:p-6">
           <div className="grid items-center gap-6 sm:grid-cols-[11rem_1fr]">
-            <motion.div
-              className="mx-auto h-44 w-44 [perspective:900px]"
-              initial="closed"
-              animate="open"
-            >
-              <motion.div
-                className="relative h-full w-full rounded-[2rem] bg-brand-purple shadow-[0_28px_64px_rgba(49,34,79,0.32)]"
-                variants={{
-                  closed: { rotateX: 18, rotateY: -18 },
-                  open: { rotateX: 0, rotateY: -8 },
-                }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              >
-                <motion.div
-                  className="absolute -top-7 left-5 right-5 h-16 origin-bottom rounded-[1.3rem] bg-brand-purple-soft"
-                  variants={{
-                    closed: { rotateX: 0, y: 0 },
-                    open: { rotateX: -74, y: -16 },
-                  }}
-                  transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                />
-                <div className="absolute inset-4 rounded-[1.65rem] border border-brand-lavender/40 bg-brand-lavender/20" />
-                <motion.div
-                  className="absolute inset-x-5 top-14 rounded-[1.5rem] bg-brand-lavender-light px-4 py-4 text-center text-sm font-black lowercase text-brand-purple"
-                  initial={{ y: 24, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                >
-                  {result.kit} reset kit
-                </motion.div>
-              </motion.div>
-            </motion.div>
+            <KitAssemblyBox products={products} lastDroppedId={lastDroppedId} />
 
             <div>
               <p className="text-sm font-black lowercase tracking-[0.2em]">
@@ -364,28 +640,16 @@ function ProductReveal({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_0.86fr]">
-        <div className="rounded-[2.6rem] border border-brand-purple/15 bg-white/35 p-5 sm:p-6">
-          <p className="text-sm font-black lowercase tracking-[0.18em]">
-            add a soft extra
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2">
-              {availableAddOns.slice(0, 4).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setProducts((current) => [...current, item])}
-                  className="rounded-[1.6rem] border border-brand-purple/15 bg-brand-lavender-light/55 p-4 text-left font-bold lowercase transition hover:-translate-y-0.5"
-                >
-                  <span className="mr-2 inline-grid h-7 w-7 place-items-center rounded-full bg-brand-purple text-brand-lavender-light">
-                    +
-                  </span>
-                  {item.name}
-                </button>
-              ))}
-          </div>
-        </div>
+      <div className="mt-5">
+        <ProductCarousel
+          products={products}
+          initialKitKeys={initialKitKeys}
+          onAdd={addProductToKit}
+        />
+      </div>
 
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_0.86fr]">
+        <div className="hidden xl:block" />
         <div className="rounded-[2.6rem] bg-brand-purple p-5 text-brand-lavender-light sm:p-6">
           <p className="text-sm font-black lowercase tracking-[0.2em]">
             one-time checkout
@@ -417,20 +681,44 @@ function ProductReveal({
             </button>
         </div>
       </div>
+
+      <div className="mt-5">
+        <SupportSection compact />
+      </div>
     </motion.section>
   );
 }
 
-export function MindRentQuiz({ firstQuestion, addOns }: MindRentQuizProps) {
+export function MindRentQuiz({ firstQuestion }: MindRentQuizProps) {
   const [question, setQuestion] = useState(firstQuestion);
   const [transcript, setTranscript] = useState<QuizAnswer[]>([]);
   const [result, setResult] = useState<QuizResult | null>(null);
+  const [isReturning, setIsReturning] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [isPending, startTransition] = useTransition();
+  const heroCopy = isReturning ? returningHero : firstVisitHero;
 
   const progress = result
     ? 1
     : Math.min((question.step - 1) / MAX_QUESTIONS + 0.12, 0.92);
+
+  useEffect(() => {
+    const visitedKey = "mindrent_visited";
+
+    if (window.localStorage.getItem(visitedKey)) {
+      const returnTimeoutId = window.setTimeout(() => {
+        setIsReturning(true);
+      }, 0);
+
+      return () => window.clearTimeout(returnTimeoutId);
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      window.localStorage.setItem(visitedKey, "true");
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   function answerCurrentQuestion(answer: QuizAnswer) {
     const nextTranscript = [...transcript, answer].slice(0, MAX_QUESTIONS);
@@ -453,10 +741,12 @@ export function MindRentQuiz({ firstQuestion, addOns }: MindRentQuizProps) {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-brand-lavender text-brand-purple">
+      <AmbientBackground />
+      <GrainOverlay />
       <BrainProgress progress={progress} />
 
       <section className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-12">
-        <nav className="glass z-10 flex items-center justify-between rounded-[2rem] px-4 py-3 sm:px-5">
+        <nav className="glass z-10 flex items-center justify-between gap-3 rounded-[2rem] px-4 py-3 sm:px-5">
           <div className="flex items-center gap-3">
             <Image
               src="/mindrent-logo.jpeg"
@@ -466,19 +756,32 @@ export function MindRentQuiz({ firstQuestion, addOns }: MindRentQuizProps) {
               priority
               className="rounded-full border border-brand-purple/15"
             />
-            <span className="text-xl font-black lowercase tracking-wide">
-              mindrent
-            </span>
+            <div className="flex flex-col">
+              <span className="text-xl font-black lowercase tracking-wide">
+                mindrent
+              </span>
+              <TimeGreeting />
+            </div>
           </div>
-          <div className="rounded-full border border-brand-purple/15 bg-white/35 px-4 py-2 text-sm font-black lowercase">
-            {result ? "box ready" : `${question.step}/${MAX_QUESTIONS}`}
+          <div className="flex items-center gap-2">
+            <Link
+              href="/shop"
+              className="rounded-full border border-brand-purple/15 bg-white/35 px-4 py-2 text-sm font-black lowercase transition hover:bg-brand-purple hover:text-brand-lavender-light"
+            >
+              shop
+            </Link>
+            <div className="rounded-full border border-brand-purple/15 bg-white/35 px-4 py-2 text-sm font-black lowercase">
+              {result ? "box ready" : `${question.step}/${MAX_QUESTIONS}`}
+            </div>
           </div>
         </nav>
+
+        <MoodTicker />
 
         {result ? (
           <div className="flex flex-1 items-center py-8 lg:py-10">
             <AnimatePresence mode="wait">
-              <ProductReveal key="result" result={result} addOns={addOns} />
+              <ProductReveal key="result" result={result} />
             </AnimatePresence>
           </div>
         ) : (
@@ -492,13 +795,12 @@ export function MindRentQuiz({ firstQuestion, addOns }: MindRentQuizProps) {
                 <p className="mb-5 text-sm font-black lowercase tracking-[0.22em]">
                   ai-guided, one reset at a time
                 </p>
-                <h2 className="max-w-3xl text-5xl font-black lowercase leading-[0.92] sm:text-7xl">
-                  a box that listens before it arrives.
-                </h2>
-                <p className="mt-6 max-w-2xl text-lg font-semibold leading-8">
-                  answer five gentle prompts. mindrent ai branches toward
-                  stress, focus, or self-care, then builds a one-time wellness
-                  kit around what your day is actually asking for.
+                <HeroHeadline text={heroCopy.headline} />
+                <p
+                  key={heroCopy.body}
+                  className="hero-copy-fade mt-6 max-w-2xl text-lg font-semibold leading-8"
+                >
+                  {heroCopy.body}
                 </p>
               </div>
 
@@ -516,17 +818,21 @@ export function MindRentQuiz({ firstQuestion, addOns }: MindRentQuizProps) {
               </div>
             </motion.div>
 
-            <AnimatePresence mode="wait">
-              <QuizCard
-                key={question.id}
-                question={question}
-                onAnswer={answerCurrentQuestion}
-                pending={isPending}
-              />
-            </AnimatePresence>
+            <div className="space-y-5">
+              <AnimatePresence mode="wait">
+                <QuizCard
+                  key={question.id}
+                  question={question}
+                  onAnswer={answerCurrentQuestion}
+                  pending={isPending}
+                />
+              </AnimatePresence>
+              <ProofCards />
+            </div>
           </div>
         )}
       </section>
+      <AppFooter />
     </main>
   );
 }

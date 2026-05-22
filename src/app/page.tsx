@@ -1,11 +1,8 @@
-import { getFirstQuestion, getSuggestedAddOns } from "@/app/actions";
+import { getFirstQuestion } from "@/app/actions";
 import { MindRentQuiz } from "@/components/MindRentQuiz";
 
 export default async function Home() {
-  const [firstQuestion, addOns] = await Promise.all([
-    getFirstQuestion(),
-    getSuggestedAddOns(),
-  ]);
+  const firstQuestion = await getFirstQuestion();
 
-  return <MindRentQuiz firstQuestion={firstQuestion} addOns={addOns} />;
+  return <MindRentQuiz firstQuestion={firstQuestion} />;
 }
