@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CartDrawer } from "@/components/CartDrawer";
 import { CartProvider } from "@/context/CartContext";
 import "./globals.css";
 
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <CartProvider>{children}</CartProvider>
+        <CartProvider>
+          {children}
+          <CartDrawer />
+        </CartProvider>
       </body>
     </html>
   );

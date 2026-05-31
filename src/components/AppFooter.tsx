@@ -12,6 +12,12 @@ export function AppFooter() {
           get support
         </Link>
         <Link
+          href="/cart"
+          className="w-fit rounded-full border border-brand-purple/15 bg-white/30 px-4 py-2 transition hover:bg-brand-purple hover:text-brand-lavender-light"
+        >
+          cart
+        </Link>
+        <Link
           href="/today"
           className="w-fit rounded-full border border-brand-purple/15 bg-white/30 px-4 py-2 transition hover:bg-brand-purple hover:text-brand-lavender-light"
         >

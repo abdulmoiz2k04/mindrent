@@ -1,11 +1,17 @@
-export const MAX_QUESTIONS = 5;
+export const MAX_QUESTIONS = 10;
 
-export type Branch = "stress" | "productivity" | "selfCare";
+export type Branch = "calm" | "focus" | "selfCare";
+
+export type AnswerOption = "a" | "b" | "c" | "custom";
+
+export type KitName = "Calm" | "Focus" | "SelfCare";
 
 export type QuizAnswer = {
   question: string;
   answer: string;
   score: number;
+  option: AnswerOption;
+  kit: KitName;
 };
 
 export type QuizQuestion = {
@@ -13,11 +19,14 @@ export type QuizQuestion = {
   step: number;
   question: string;
   branch: Branch;
-  inputMode: "slider" | "priority";
-  answers: [string, string, string];
+  section: string;
+  inputMode: "choice";
+  answers: [
+    { option: "a"; text: string; kit: "Calm" },
+    { option: "b"; text: string; kit: "Focus" },
+    { option: "c"; text: string; kit: "SelfCare" },
+  ];
 };
-
-export type KitName = "Basic" | "Focus" | "Gift";
 
 export type KitProduct = {
   id: string;

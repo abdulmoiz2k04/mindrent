@@ -1,9 +1,7 @@
 "use server";
 
-import crypto from "node:crypto";
 import {
   MAX_QUESTIONS,
-  type Branch,
   type KitName,
   type KitProduct,
   type QuizAnswer,
@@ -11,344 +9,269 @@ import {
   type QuizResult,
   type QuizServerResponse,
 } from "@/lib/quiz-types";
+import { shopProducts, type ShopCategory } from "@/lib/shop-products";
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-const productCatalog: KitProduct[] = [
+const quizQuestions: QuizQuestion[] = [
   {
-    id: "guided-journal",
-    name: "guided journal",
-    reason: "turns noisy thoughts into one calm page",
-    price: 1450,
+    id: "current-feeling",
+    step: 1,
+    section: "current state",
+    branch: "calm",
+    inputMode: "choice",
+    question: "how have you been feeling most days recently?",
+    answers: [
+      { option: "a", text: "overwhelmed, anxious, or tense", kit: "Calm" },
+      { option: "b", text: "unmotivated or mentally scattered", kit: "Focus" },
+      { option: "c", text: "low, tired, or emotionally drained", kit: "SelfCare" },
+    ],
   },
   {
-    id: "sleep-tea",
-    name: "night reset tea",
-    reason: "pairs with a softer evening wind-down",
-    price: 950,
+    id: "daily-impact",
+    step: 2,
+    section: "current state",
+    branch: "focus",
+    inputMode: "choice",
+    question: "what affects your daily life the most right now?",
+    answers: [
+      { option: "a", text: "constant worrying or overthinking", kit: "Calm" },
+      { option: "b", text: "difficulty focusing or staying productive", kit: "Focus" },
+      { option: "c", text: "lack of energy or feeling emotionally down", kit: "SelfCare" },
+    ],
   },
   {
-    id: "focus-cards",
-    name: "focus prompt cards",
-    reason: "helps break work into tiny next steps",
-    price: 1200,
+    id: "sleep-quality",
+    step: 3,
+    section: "current state",
+    branch: "selfCare",
+    inputMode: "choice",
+    question: "how well are you sleeping?",
+    answers: [
+      { option: "a", text: "poorly - i struggle to relax or fall asleep", kit: "Calm" },
+      { option: "b", text: "irregular - my schedule is messy", kit: "Focus" },
+      { option: "c", text: "i sleep, but still feel tired", kit: "SelfCare" },
+    ],
   },
   {
-    id: "weighted-eye-pillow",
-    name: "weighted eye pillow",
-    reason: "adds body-level calm without screens",
-    price: 1800,
+    id: "stress-response",
+    step: 4,
+    section: "behavioral patterns",
+    branch: "calm",
+    inputMode: "choice",
+    question: "when you feel stressed, what do you usually do?",
+    answers: [
+      { option: "a", text: "overthink or feel physically tense", kit: "Calm" },
+      { option: "b", text: "procrastinate or avoid tasks", kit: "Focus" },
+      { option: "c", text: "withdraw and isolate myself", kit: "SelfCare" },
+    ],
   },
   {
-    id: "calming-candle",
-    name: "calming candle",
-    reason: "creates a clear ritual boundary",
-    price: 1650,
+    id: "productivity-now",
+    step: 5,
+    section: "behavioral patterns",
+    branch: "focus",
+    inputMode: "choice",
+    question: "how would you describe your productivity right now?",
+    answers: [
+      { option: "a", text: "i feel too anxious to function properly", kit: "Calm" },
+      { option: "b", text: "i struggle to stay consistent and focused", kit: "Focus" },
+      { option: "c", text: "i don't feel motivated to even start", kit: "SelfCare" },
+    ],
   },
   {
-    id: "breathing-stone",
-    name: "breathing stone",
-    reason: "gives anxious hands something steady",
-    price: 1100,
+    id: "intentional-breaks",
+    step: 6,
+    section: "behavioral patterns",
+    branch: "selfCare",
+    inputMode: "choice",
+    question: "how often do you take intentional breaks for yourself?",
+    answers: [
+      { option: "a", text: "rarely - i'm always mentally occupied", kit: "Calm" },
+      { option: "b", text: "sometimes, but i feel guilty about it", kit: "Focus" },
+      { option: "c", text: "i try, but i don't enjoy them much", kit: "SelfCare" },
+    ],
   },
   {
-    id: "gratitude-notes",
-    name: "gratitude notes",
-    reason: "makes care feel giftable and concrete",
-    price: 850,
+    id: "need-most",
+    step: 7,
+    section: "needs and preferences",
+    branch: "calm",
+    inputMode: "choice",
+    question: "what do you feel you need the most right now?",
+    answers: [
+      { option: "a", text: "calmness and mental relief", kit: "Calm" },
+      { option: "b", text: "structure and productivity", kit: "Focus" },
+      { option: "c", text: "emotional comfort and self-care", kit: "SelfCare" },
+    ],
   },
   {
-    id: "desk-timer",
-    name: "soft desk timer",
-    reason: "supports focus without phone checking",
-    price: 2100,
+    id: "helpful-activity",
+    step: 8,
+    section: "needs and preferences",
+    branch: "focus",
+    inputMode: "choice",
+    question: "which activity sounds most helpful to you?",
+    answers: [
+      { option: "a", text: "deep breathing, relaxation, or calming rituals", kit: "Calm" },
+      { option: "b", text: "planning my day and staying organized", kit: "Focus" },
+      { option: "c", text: "journaling, skincare, or relaxing activities", kit: "SelfCare" },
+    ],
+  },
+  {
+    id: "support-preference",
+    step: 9,
+    section: "needs and preferences",
+    branch: "selfCare",
+    inputMode: "choice",
+    question: "what kind of support do you prefer?",
+    answers: [
+      { option: "a", text: "something that helps reduce anxiety quickly", kit: "Calm" },
+      { option: "b", text: "something that helps me stay on track", kit: "Focus" },
+      { option: "c", text: "something that improves my mood and energy", kit: "SelfCare" },
+    ],
+  },
+  {
+    id: "routine-context",
+    step: 10,
+    section: "lifestyle context",
+    branch: "calm",
+    inputMode: "choice",
+    question: "what best describes your current routine?",
+    answers: [
+      { option: "a", text: "busy but mentally overwhelming", kit: "Calm" },
+      { option: "b", text: "unstructured and inconsistent", kit: "Focus" },
+      { option: "c", text: "slow, low-energy, or draining", kit: "SelfCare" },
+    ],
   },
 ];
 
-const validKits: KitName[] = ["Basic", "Focus", "Gift"];
-
-const productsByKit: Record<KitName, KitProduct[]> = {
-  Basic: productCatalog.filter((item) =>
-    [
-      "guided-journal",
-      "sleep-tea",
-      "weighted-eye-pillow",
-      "breathing-stone",
-      "calming-candle",
-    ].includes(item.id),
-  ),
-  Focus: productCatalog.filter((item) =>
-    [
-      "focus-cards",
-      "desk-timer",
-      "guided-journal",
-      "breathing-stone",
-      "sleep-tea",
-    ].includes(item.id),
-  ),
-  Gift: productCatalog.filter((item) =>
-    [
-      "calming-candle",
-      "gratitude-notes",
-      "weighted-eye-pillow",
-      "sleep-tea",
-      "guided-journal",
-      "breathing-stone",
-    ].includes(item.id),
-  ),
+const categoryByKit: Record<KitName, ShopCategory> = {
+  Calm: "calm",
+  Focus: "focus",
+  SelfCare: "selfCare",
 };
 
-const kitSignals: Record<KitName, RegExp[]> = {
-  Basic: [
-    /heavy/,
-    /noisy|noise/,
-    /overwhelm/,
-    /anxious|anxiety/,
-    /panic/,
-    /pressure/,
-    /stress/,
-    /ruminat|overthink/,
-    /tension|tense/,
-    /body/,
-    /sleep|restless/,
-    /too much|carrying/,
-  ],
-  Focus: [
-    /focus/,
-    /deadline/,
-    /productive|productivity/,
-    /work/,
-    /task/,
-    /procrastinat/,
-    /phone|checking/,
-    /distract/,
-    /executive/,
-    /scattered/,
-    /drift/,
-    /tabs?/,
-  ],
-  Gift: [
-    /care|self-care/,
-    /kindness|self-kind/,
-    /gentle/,
-    /alone|lonely/,
-    /low energy/,
-    /tired/,
-    /burnout|depleted/,
-    /replenish/,
-    /gift/,
-    /comfort/,
-    /rest/,
-    /soft/,
-    /physical/,
-    /reflective/,
-  ],
+const kitLabels: Record<KitName, string> = {
+  Calm: "Calm Kit",
+  Focus: "Focus & Productivity Kit",
+  SelfCare: "Self-Care & Mood Boost Kit",
 };
 
-const firstQuestion: QuizQuestion = {
-  id: "start-day",
-  step: 1,
-  question: "how has your day been so far?",
-  branch: "selfCare",
-  inputMode: "slider",
-  answers: ["heavy and noisy", "scattered but manageable", "quietly okay"],
+const kitReasons: Record<KitName, string> = {
+  Calm:
+    "based on your responses, you may be experiencing stress, anxiety, or mental overload. we recommend the calm kit to help you relax, reset, and regain control.",
+  Focus:
+    "based on your responses, your biggest need seems to be structure, focus, and task execution. we recommend the focus & productivity kit to help you restart with clearer steps.",
+  SelfCare:
+    "based on your responses, you may be feeling low, tired, or emotionally drained. we recommend the self-care & mood boost kit to help you feel comforted and replenished.",
 };
 
-const curatedQuestions: Record<
-  Branch,
-  Array<Omit<QuizQuestion, "id" | "step" | "branch">>
-> = {
-  stress: [
-    {
-      inputMode: "priority",
-      question: "where does the pressure show up most clearly?",
-      answers: ["racing thoughts", "body tension", "restless sleep"],
-    },
-    {
-      inputMode: "slider",
-      question: "what would make tonight feel easier?",
-      answers: ["less overthinking", "a quieter body", "a small ritual"],
-    },
-    {
-      inputMode: "priority",
-      question: "what kind of calm would actually reach you?",
-      answers: ["something grounding", "something sensory", "something sleep-friendly"],
-    },
-    {
-      inputMode: "slider",
-      question: "what feels hardest to put down right now?",
-      answers: ["mental noise", "emotional load", "body stress"],
-    },
-  ],
-  productivity: [
-    {
-      inputMode: "priority",
-      question: "what steals your focus most often?",
-      answers: ["too many tasks", "phone checking", "low momentum"],
-    },
-    {
-      inputMode: "slider",
-      question: "what would help you start without forcing it?",
-      answers: ["tiny next steps", "a visible timer", "less desk clutter"],
-    },
-    {
-      inputMode: "priority",
-      question: "when work feels sticky, what do you need first?",
-      answers: ["clear priorities", "less distraction", "energy support"],
-    },
-    {
-      inputMode: "slider",
-      question: "what would make your next task feel lighter?",
-      answers: ["structure", "focus cues", "a reset break"],
-    },
-  ],
-  selfCare: [
-    {
-      inputMode: "priority",
-      question: "what kind of care feels easiest to accept?",
-      answers: ["something restful", "something comforting", "something reflective"],
-    },
-    {
-      inputMode: "slider",
-      question: "where does your energy feel most depleted?",
-      answers: ["my body", "my mood", "my patience"],
-    },
-    {
-      inputMode: "priority",
-      question: "what would feel like being looked after?",
-      answers: ["warmth", "soft routine", "a kind reminder"],
-    },
-    {
-      inputMode: "slider",
-      question: "what part of you needs replenishing first?",
-      answers: ["rest", "self-kindness", "connection"],
-    },
-  ],
-};
-
-function stableId(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 42);
+function toKitProduct(product: (typeof shopProducts)[number]): KitProduct {
+  return {
+    id: product.id,
+    name: product.name,
+    reason: product.description,
+    price: product.price,
+  };
 }
 
-function normalizeText(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+function countAnswers(transcript: QuizAnswer[]) {
+  return transcript.reduce(
+    (counts, answer) => {
+      const kit =
+        answer.option === "custom" ? inferKitFromText(answer.answer) : answer.kit;
 
-function isBranch(value: unknown): value is Branch {
-  return (
-    value === "stress" || value === "productivity" || value === "selfCare"
+      return {
+        ...counts,
+        [kit]: counts[kit] + 1,
+      };
+    },
+    { Calm: 0, Focus: 0, SelfCare: 0 } satisfies Record<KitName, number>,
   );
 }
 
-function usedQuestionTexts(transcript: QuizAnswer[]) {
-  return new Set(
-    [firstQuestion.question, ...transcript.map((item) => item.question)].map(
-      normalizeText,
-    ),
+function inferKitFromText(text: string): KitName {
+  const normalized = text.toLowerCase();
+  const scores: Record<KitName, number> = {
+    Calm: 0,
+    Focus: 0,
+    SelfCare: 0,
+  };
+
+  [
+    /anxious|anxiety|panic|worry|overthinking|tense|stress|overwhelmed|restless|relax|calm/,
+    /sleep|headache|pressure|breath|breathing|mental overload/,
+  ].forEach((pattern) => {
+    if (pattern.test(normalized)) {
+      scores.Calm += 1;
+    }
+  });
+
+  [
+    /focus|productive|productivity|task|deadline|procrastinate|plan|planning|consistent|structure/,
+    /organize|organized|routine|track|unfinished|motivat/,
+  ].forEach((pattern) => {
+    if (pattern.test(normalized)) {
+      scores.Focus += 1;
+    }
+  });
+
+  [
+    /tired|drained|low|sad|mood|burnout|burnt|comfort|self care|self-care|skincare/,
+    /lonely|isolate|numb|energy|happy|balanced|replenish/,
+  ].forEach((pattern) => {
+    if (pattern.test(normalized)) {
+      scores.SelfCare += 1;
+    }
+  });
+
+  return chooseKit(scores);
+}
+
+function chooseKit(counts: Record<KitName, number>): KitName {
+  const { Calm, Focus, SelfCare } = counts;
+  const max = Math.max(Calm, Focus, SelfCare);
+  const leaders = (Object.keys(counts) as KitName[]).filter(
+    (kit) => counts[kit] === max,
   );
-}
 
-function hasDuplicateQuestion(question: string, transcript: QuizAnswer[]) {
-  return usedQuestionTexts(transcript).has(normalizeText(question));
-}
-
-function isCleanAnswerSet(
-  answers: unknown,
-): answers is [string, string, string] {
-  if (!Array.isArray(answers) || answers.length < 3) {
-    return false;
+  if (leaders.length === 1) {
+    return leaders[0];
   }
 
-  const cleanAnswers = answers
-    .slice(0, 3)
-    .filter(
-      (answer): answer is string =>
-        typeof answer === "string" &&
-        answer.trim().length >= 3 &&
-        answer.trim().length <= 42,
-    );
-  const uniqueAnswers = new Set(cleanAnswers.map(normalizeText));
+  if (leaders.includes("Calm") && leaders.includes("Focus")) {
+    return "Calm";
+  }
 
-  return cleanAnswers.length === 3 && uniqueAnswers.size === 3;
+  if (leaders.includes("Focus") && leaders.includes("SelfCare")) {
+    return "Focus";
+  }
+
+  if (leaders.includes("Calm") && leaders.includes("SelfCare")) {
+    return "SelfCare";
+  }
+
+  return "Calm";
 }
 
-function inferBranch(transcript: QuizAnswer[]): Branch {
-  const kit = scoreTranscript(transcript).kit;
+function buildFallbackResult(transcript: QuizAnswer[]): QuizResult {
+  const counts = countAnswers(transcript);
+  const kit = chooseKit(counts);
+  const products = shopProducts
+    .filter((product) => product.category === categoryByKit[kit])
+    .map(toKitProduct);
 
-  if (kit === "Focus") {
-    return "productivity";
-  }
-
-  if (kit === "Gift") {
-    return "selfCare";
-  }
-
-  return "stress";
-}
-
-function inferKit(branch: Branch, transcript: QuizAnswer[]): KitName {
-  const scoredKit = scoreTranscript(transcript).kit;
-
-  if (scoredKit) {
-    return scoredKit;
-  }
-
-  return branch === "productivity"
-    ? "Focus"
-    : branch === "selfCare"
-      ? "Gift"
-      : "Basic";
+  return {
+    kit,
+    reasoning: kitReasons[kit],
+    products,
+  };
 }
 
 function isKitName(value: unknown): value is KitName {
-  return typeof value === "string" && validKits.includes(value as KitName);
-}
-
-function scoreTranscript(transcript: QuizAnswer[]) {
-  const scores: Record<KitName, number> = {
-    Basic: 0,
-    Focus: 0,
-    Gift: 0,
-  };
-
-  transcript.forEach((item, index) => {
-    const text = `${item.question} ${item.answer}`.toLowerCase();
-    const answerWeight = item.score >= 67 ? 1.15 : item.score <= 33 ? 0.95 : 1;
-    const recencyWeight = 1 + index * 0.04;
-
-    validKits.forEach((kit) => {
-      const signalCount = kitSignals[kit].filter((pattern) =>
-        pattern.test(text),
-      ).length;
-
-      scores[kit] += signalCount * answerWeight * recencyWeight;
-    });
-  });
-
-  if (scores.Basic === 0 && scores.Focus === 0 && scores.Gift === 0) {
-    return { kit: "Basic" as KitName, scores };
-  }
-
-  const tieBreaker: KitName[] = ["Basic", "Gift", "Focus"];
-  const kit = tieBreaker.reduce((winner, kit) =>
-    scores[kit] > scores[winner] ? kit : winner,
-  );
-
-  return { kit, scores };
-}
-
-function logDev(label: string, value: unknown) {
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[mindrent quiz] ${label}`, value);
-  }
+  return value === "Calm" || value === "Focus" || value === "SelfCare";
 }
 
 function safeJson<T>(text: string): T | null {
@@ -376,138 +299,11 @@ function safeJson<T>(text: string): T | null {
   }
 }
 
-function normalizeQuestion(
-  value: Partial<QuizQuestion> | null,
-  transcript: QuizAnswer[],
-): QuizQuestion {
-  const step = Math.min(transcript.length + 1, MAX_QUESTIONS);
-  const branch = isBranch(value?.branch) ? value.branch : inferBranch(transcript);
-  const fallback = fallbackQuestion(transcript);
-  const question =
-    typeof value?.question === "string" ? value.question.trim() : "";
-
-  if (
-    question.length < 12 ||
-    hasDuplicateQuestion(question, transcript) ||
-    !isCleanAnswerSet(value?.answers)
-  ) {
-    logDev("question fallback used", {
-      reason: "invalid, repeated, or weak ai question/options",
-      aiQuestion: value,
-      fallback,
-    });
-    return fallback;
-  }
-
-  return {
-    id: value?.id ?? `${branch}-${step}-${stableId(question)}`,
-    step,
-    question,
-    branch,
-    inputMode: value?.inputMode === "priority" ? "priority" : "slider",
-    answers: value.answers.map((answer) => answer.trim()) as [
-      string,
-      string,
-      string,
-    ],
-  };
-}
-
-function normalizeProducts(products: Partial<KitProduct>[] | undefined) {
-  const cleanProducts =
-    products
-      ?.map((item) => ({
-        id: item.id ?? stableId(item.name ?? ""),
-        name: item.name ?? "",
-        reason: item.reason ?? "supports your personalized reset",
-        price: Number(item.price) || 1200,
-      }))
-      .filter((item) => item.id && item.name)
-      .slice(0, 7) ?? [];
-
-  return cleanProducts.length >= 5 ? cleanProducts : productCatalog.slice(0, 6);
-}
-
-function normalizeResult(
-  value: Partial<QuizResult> | null,
-  transcript: QuizAnswer[],
-): QuizResult {
-  const fallback = fallbackResult(transcript);
-
-  if (!isKitName(value?.kit)) {
-    return fallback;
-  }
-
-  return {
-    kit: value.kit,
-    reasoning: value.reasoning ?? fallback.reasoning,
-    products: normalizeProducts(value?.products ?? fallback.products),
-  };
-}
-
-function fallbackQuestion(transcript: QuizAnswer[]): QuizQuestion {
-  const branch = inferBranch(transcript);
-  const step = Math.min(transcript.length + 1, MAX_QUESTIONS);
-  const usedQuestions = usedQuestionTexts(transcript);
-  const template =
-    curatedQuestions[branch].find(
-      (question) => !usedQuestions.has(normalizeText(question.question)),
-    ) ??
-    Object.values(curatedQuestions)
-      .flat()
-      .find((question) => !usedQuestions.has(normalizeText(question.question))) ??
-    curatedQuestions[branch][0];
-
-  return {
-    id: `${branch}-${step}-${stableId(template.question)}`,
-    step,
-    branch,
-    inputMode: template.inputMode,
-    question: template.question,
-    answers: template.answers,
-  };
-}
-
-function fallbackResult(transcript: QuizAnswer[]): QuizResult {
-  const branch = inferBranch(transcript);
-  const kit = inferKit(branch, transcript);
-
-  return {
-    kit,
-    reasoning:
-      branch === "productivity"
-        ? "you seem to be carrying focus friction and task pressure, especially when small distractions stack up."
-        : branch === "stress"
-          ? "you are experiencing stress and overthinking, with your nervous system asking for a quieter reset."
-          : "your answers point toward depleted self-care capacity, so the box leans into gentle rituals that are easy to start.",
-    products: productsByKit[kit],
-  };
-}
-
-async function askGemini(prompt: string, systemPrompt?: string) {
+async function askGemini(prompt: string) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     return null;
-  }
-
-  const body: Record<string, unknown> = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: prompt }],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.45,
-      responseMimeType: "application/json",
-    },
-  };
-
-  if (systemPrompt) {
-    body.systemInstruction = {
-      parts: [{ text: systemPrompt }],
-    };
   }
 
   const response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
@@ -515,7 +311,25 @@ async function askGemini(prompt: string, systemPrompt?: string) {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [
+          {
+            text: "You are MindRent's recommendation engine. You do not diagnose. You use quiz choices and custom written answers to choose the most fitting wellness kit. Return JSON only.",
+          },
+        ],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.35,
+        responseMimeType: "application/json",
+      },
+    }),
     cache: "no-store",
   });
 
@@ -530,106 +344,66 @@ async function askGemini(prompt: string, systemPrompt?: string) {
   return payload.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
 }
 
-function buildRecommendationSystemPrompt() {
-  return `You are MindRent's kit recommendation engine.
-Do not diagnose, do not make medical claims, and do not imply therapy replacement.
-Your job is to analyze all 5 quiz answers holistically and choose the single MOST fitting kit. Never default to Focus just because the user mentions feeling scattered once.
+function buildAiPrompt(transcript: QuizAnswer[], sessionId: string) {
+  const counts = countAnswers(transcript);
 
-The 3 kit types are:
-1. Basic: the calm kit. Choose this for stress relief, emotional heaviness, anxiety, overwhelm, body tension, rumination, overstimulation, sleep trouble, or needing the world to feel quieter.
-2. Focus: the productivity kit. Choose this only when the strongest overall pattern is work friction, deadlines, procrastination, phone checking, distraction, task initiation, or attention support.
-3. Gift: the self-care kit. Choose this for depleted energy, loneliness, burnout, self-kindness, replenishment, comfort, rest, or when the user seems to need care that feels soft and gift-like.
+  return `Session: ${sessionId.slice(0, 12)}
 
-Examples:
-- If the user feels emotionally heavy, overwhelmed, overstimulated, or mentions noise/anxiety -> Basic.
-- If the user repeatedly mentions deadlines, tasks, procrastination, phone checking, or trouble starting work -> Focus.
-- If the user feels tired, lonely, burnt out, low-energy, or asks for gentle care/rest -> Gift.
-- If signals conflict, count the whole transcript and pick the kit with the strongest repeated signal. A single scattered/focus word should not override heavier calm or self-care signals.
+MindRent has 3 kits:
+- Calm: stress, anxiety relief, mental overload, overthinking, physical tension, sleep trouble. Products: breathing cards, lavender scented candle, chamomile tea, guided journal, fidget tools, dark chocolate.
+- Focus: productivity, structure, task execution, procrastination, consistency. Products: pomodoro timer, to-do planner pad, motivation stickers, granola bars, affirmation cards, acrylic paints, small brush and canvas, chamomile tea, key chain.
+- SelfCare: low mood, fatigue, emotional burnout, comfort, mood boost, self-care. Products: sheet face mask, scented candle, gratitude journal, sleep mask, energy bars, peppermint green tea.
 
-Return JSON only with this shape:
+The fixed A/B/C score is:
+${JSON.stringify(counts, null, 2)}
+
+Tie-breakers:
+- Calm + Focus tie -> Calm
+- Focus + SelfCare tie -> Focus
+- Calm + SelfCare tie -> SelfCare
+
+Important:
+- Custom answers may override the fixed score when they reveal a stronger real need.
+- Read the user's custom text carefully.
+- Choose exactly one kit: Calm, Focus, or SelfCare.
+- Return JSON only:
 {
-  "kit": "Basic" | "Focus" | "Gift",
-  "reasoning": "one or two warm lowercase sentences explaining the choice",
-  "products": [
-    { "id": "short-kebab-id", "name": "product name", "reason": "why it belongs", "price": 1200 }
-  ]
-}
-The kit value must be exactly one of: Basic, Focus, Gift. Products must contain 5 to 7 physical items with integer PKR prices.`;
-}
-
-function buildQuestionPrompt(transcript: QuizAnswer[], sessionId: string) {
-  const pseudonymousSession = crypto
-    .createHash("sha256")
-    .update(sessionId)
-    .digest("hex")
-    .slice(0, 16);
-  const branch = inferBranch(transcript);
-  const forbiddenQuestions = [
-    firstQuestion.question,
-    ...transcript.map((item) => item.question),
-  ];
-
-  return `You are MindRent's careful onboarding psychologist and product curator.
-Do not diagnose. Do not mention therapy replacement. Use lowercase, warm language.
-The user's session is pseudonymous: ${pseudonymousSession}.
-The current strongest signal is: ${branch}.
-
-Branch rules:
-- Path A Stress tendency: choose this if answers mention pressure, overthinking, nighttime rumination, body tension, panic, or emotional load.
-- Path B Productivity issues: choose this if answers mention focus, procrastination, scattered work, deadlines, phone checking, or executive friction.
-- Path C Self-care needs: choose this if answers mention low energy, loneliness, rest, sleep, self-kindness, burnout, or needing gentle rituals.
-
-The quiz has a strict maximum of ${MAX_QUESTIONS} questions. The first question was hardcoded by the app. Generate only the next question.
-Hard rules:
-- Never repeat, rephrase, or closely mirror any forbidden question.
-- The answer choices must directly answer the exact question being asked.
-- Each answer choice must be concrete, emotionally useful, and distinct.
-- Do not return generic choices like "yes", "no", "maybe", "not sure", "all of the above", or unrelated product names.
-- Use the transcript to ask about the next missing dimension: body, thoughts, energy, sleep, focus friction, emotional load, or care preference.
-
-Forbidden questions:
-${forbiddenQuestions.map((question) => `- ${question}`).join("\n")}
-
-Return JSON only:
-{
-  "id": "short-kebab-id",
-  "step": ${Math.min(transcript.length + 1, MAX_QUESTIONS)},
-  "branch": "stress" | "productivity" | "selfCare",
-  "inputMode": "slider" | "priority",
-  "question": "one concise question",
-  "answers": ["choice one", "choice two", "choice three"]
+  "kit": "Calm" | "Focus" | "SelfCare",
+  "reasoning": "warm lowercase explanation in one or two sentences"
 }
 
 Transcript:
 ${JSON.stringify(transcript, null, 2)}`;
 }
 
-function buildResultPrompt(transcript: QuizAnswer[], sessionId: string) {
-  const pseudonymousSession = crypto
-    .createHash("sha256")
-    .update(sessionId)
-    .digest("hex")
-    .slice(0, 16);
-  const scored = scoreTranscript(transcript);
+async function buildResult(transcript: QuizAnswer[], sessionId: string) {
+  const fallback = buildFallbackResult(transcript);
+  const text = await askGemini(buildAiPrompt(transcript, sessionId));
+  const parsed = safeJson<Partial<Pick<QuizResult, "kit" | "reasoning">>>(
+    text ?? "",
+  );
 
-  return `The user's session is pseudonymous: ${pseudonymousSession}.
-Analyze these 5 quiz answers and recommend one kit. Treat answer text and slider scores as signals, but make the final decision from the whole pattern.
-Rule-based signal scores are provided as a second opinion, not a command. If the transcript clearly says otherwise, explain that clearly and choose the better kit.
+  if (process.env.NODE_ENV === "development") {
+    console.log("[mindrent quiz] ai recommendation", text);
+  }
 
-Rule-based signal scores:
-${JSON.stringify(scored.scores, null, 2)}
+  if (!isKitName(parsed?.kit)) {
+    return fallback;
+  }
 
-Available product themes:
-- Basic/calm: breathing stone, guided journal, night reset tea, weighted eye pillow, calming candle.
-- Focus: focus prompt cards, soft desk timer, guided journal, breathing stone, night reset tea.
-- Gift/self-care: calming candle, gratitude notes, weighted eye pillow, night reset tea, guided journal, breathing stone.
+  const kit = parsed.kit;
 
-Transcript:
-${JSON.stringify(transcript, null, 2)}`;
+  return {
+    kit,
+    reasoning: parsed.reasoning ?? fallback.reasoning,
+    products: shopProducts
+      .filter((product) => product.category === categoryByKit[kit])
+      .map(toKitProduct),
+  };
 }
 
 export async function getFirstQuestion(): Promise<QuizQuestion> {
-  return firstQuestion;
+  return quizQuestions[0];
 }
 
 export async function continueQuiz(input: {
@@ -638,38 +412,24 @@ export async function continueQuiz(input: {
 }): Promise<QuizServerResponse> {
   const transcript = input.transcript.slice(0, MAX_QUESTIONS);
 
-  logDev("raw quiz answers", transcript);
-
-  if (transcript.length >= MAX_QUESTIONS) {
-    const text = await askGemini(
-      buildResultPrompt(transcript, input.sessionId),
-      buildRecommendationSystemPrompt(),
-    );
-    const parsed = safeJson<Partial<QuizResult>>(text ?? "");
-
-    logDev("raw ai recommendation response", text);
-
-    if (!isKitName(parsed?.kit)) {
-      logDev("rule-based recommendation fallback", scoreTranscript(transcript));
-    }
-
-    const result = text
-      ? normalizeResult(parsed, transcript)
-      : fallbackResult(transcript);
-
-    return { status: "result", result };
+  if (process.env.NODE_ENV === "development") {
+    console.log("[mindrent quiz] scored answers", countAnswers(transcript));
   }
 
-  const text = await askGemini(buildQuestionPrompt(transcript, input.sessionId));
-  logDev("raw ai question response", text);
-  const question = normalizeQuestion(
-    safeJson<Partial<QuizQuestion>>(text ?? ""),
-    transcript,
-  );
+  if (transcript.length >= MAX_QUESTIONS) {
+    return {
+      status: "result",
+      result: await buildResult(transcript, input.sessionId),
+    };
+  }
 
-  return { status: "question", question };
+  return { status: "question", question: quizQuestions[transcript.length] };
 }
 
 export async function getSuggestedAddOns() {
-  return productCatalog;
+  return shopProducts.map(toKitProduct);
+}
+
+export async function getKitLabels() {
+  return kitLabels;
 }

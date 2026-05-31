@@ -6,9 +6,9 @@ import { useMemo, useState } from "react";
 import { AppFooter } from "@/components/AppFooter";
 import { TimeGreeting } from "@/components/TimeGreeting";
 import { useCart } from "@/context/CartContext";
-import { shopProducts } from "@/lib/shop-products";
+import { kitCategoryLabels, shopProducts } from "@/lib/shop-products";
 
-const filters = ["all", "focus", "basic", "gift"] as const;
+const filters = ["all", "calm", "focus", "selfCare"] as const;
 
 type CategoryFilter = (typeof filters)[number];
 
@@ -18,24 +18,6 @@ function formatPrice(price: number) {
     currency: "PKR",
     maximumFractionDigits: 0,
   }).format(price);
-}
-
-function FloatingCartBubble() {
-  const { itemCount, total } = useCart();
-
-  return (
-    <div className="fixed bottom-5 right-5 z-30 rounded-[1.6rem] border border-brand-purple/15 bg-white/75 px-5 py-4 text-brand-purple shadow-[0_20px_54px_rgba(49,34,79,0.22)] backdrop-blur-2xl">
-      <p className="text-[0.68rem] font-black lowercase tracking-[0.2em] opacity-70">
-        box
-      </p>
-      <div className="mt-1 flex items-end gap-3">
-        <span className="text-3xl font-black leading-none">{itemCount}</span>
-        <span className="pb-1 text-xs font-black lowercase opacity-70">
-          {formatPrice(total)}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 export default function ShopPage() {
@@ -79,7 +61,7 @@ export default function ShopPage() {
           </Link>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Link
-              href="/"
+              href="/quiz"
               className="rounded-full border border-brand-purple/15 bg-white/35 px-4 py-2 text-sm font-black lowercase transition hover:bg-brand-purple hover:text-brand-lavender-light"
             >
               quiz
@@ -101,8 +83,8 @@ export default function ShopPage() {
           </div>
           <div className="rounded-[2.4rem] border border-brand-purple/15 bg-white/35 p-5 shadow-[0_18px_46px_rgba(49,34,79,0.12)] backdrop-blur-xl">
             <p className="text-lg font-semibold leading-8 lowercase">
-              browse individual resets across focus, basic care, and giftable
-              softness. add what fits, skip what does not.
+              browse real mindrent items across calm, focus, and self-care.
+              add what fits, skip what does not.
             </p>
           </div>
         </header>
@@ -123,7 +105,7 @@ export default function ShopPage() {
                     : "rounded-full border border-brand-purple/15 bg-white/45 px-5 py-3 text-sm font-black lowercase transition hover:-translate-y-0.5 hover:bg-white/70"
                 }
               >
-                {filter}
+                {filter === "all" ? "all" : kitCategoryLabels[filter]}
               </button>
             );
           })}
@@ -140,7 +122,7 @@ export default function ShopPage() {
                   {product.icon}
                 </div>
                 <span className="rounded-full border border-brand-purple/15 px-3 py-1 text-[0.66rem] font-black lowercase tracking-[0.18em] opacity-70">
-                  {product.category}
+                  {kitCategoryLabels[product.category]}
                 </span>
               </div>
 
@@ -167,7 +149,6 @@ export default function ShopPage() {
       </section>
 
       <AppFooter />
-      <FloatingCartBubble />
     </main>
   );
 }

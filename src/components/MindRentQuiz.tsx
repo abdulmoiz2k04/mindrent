@@ -2,29 +2,41 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, Reorder, motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { continueQuiz } from "@/app/actions";
 import { AppFooter } from "@/components/AppFooter";
 import { SupportSection } from "@/components/SupportSection";
 import { TimeGreeting } from "@/components/TimeGreeting";
 import {
+  type AnswerOption,
   MAX_QUESTIONS,
   type KitProduct,
+  type KitName,
   type QuizAnswer,
   type QuizQuestion,
   type QuizResult,
 } from "@/lib/quiz-types";
-import { shopProducts, type ShopProduct } from "@/lib/shop-products";
+import {
+  kitCategoryLabels,
+  shopProducts,
+  type ShopProduct,
+} from "@/lib/shop-products";
 
 type MindRentQuizProps = {
   firstQuestion: QuizQuestion;
 };
 
 const kitBasePrices = {
-  Basic: 4200,
-  Focus: 5400,
-  Gift: 6200,
+  Calm: 0,
+  Focus: 0,
+  SelfCare: 0,
+};
+
+const kitDisplayNames: Record<KitName, string> = {
+  Calm: "Calm Kit",
+  Focus: "Focus & Productivity Kit",
+  SelfCare: "Self-Care & Mood Boost Kit",
 };
 
 const moodStates = [
@@ -40,7 +52,7 @@ const moodStates = [
 
 const firstVisitHero = {
   headline: "a box that listens before it arrives.",
-  body: "answer five gentle prompts. mindrent ai branches toward stress, focus, or self-care, then builds a one-time wellness kit around what your day is actually asking for.",
+  body: "answer ten gentle prompts. mindrent reads your a/b/c pattern across calm, focus, and self-care, then builds a one-time wellness kit around what your day is actually asking for.",
 };
 
 const returningHero = {
@@ -215,7 +227,7 @@ function BrainProgress({ progress }: { progress: number }) {
   );
 }
 
-function SliderAnswer({
+function ChoiceAnswer({
   question,
   onAnswer,
   disabled,
@@ -224,105 +236,97 @@ function SliderAnswer({
   onAnswer: (answer: QuizAnswer) => void;
   disabled: boolean;
 }) {
-  const [score, setScore] = useState(50);
-  const selectedIndex = Math.min(2, Math.floor(score / 34));
-  const selected = question.answers[selectedIndex];
+  const [selectedOption, setSelectedOption] = useState<AnswerOption>("a");
+  const [customText, setCustomText] = useState("");
+  const selected = question.answers.find(
+    (answer) => answer.option === selectedOption,
+  );
+  const branchFallbackKit: Record<QuizQuestion["branch"], KitName> = {
+    calm: "Calm",
+    focus: "Focus",
+    selfCare: "SelfCare",
+  };
+  const customSelected = selectedOption === "custom";
+  const canContinue =
+    !disabled && (!customSelected || customText.trim().length >= 3);
 
   return (
     <div className="space-y-7">
-      <div className="rounded-[2rem] border border-brand-purple/15 bg-white/35 p-5">
-        <input
-          aria-label="answer intensity"
-          type="range"
-          min="0"
-          max="100"
-          value={score}
-          onChange={(event) => setScore(Number(event.target.value))}
-          className="mind-slider"
-        />
-        <div className="mt-5 grid grid-cols-3 gap-3 text-center text-xs font-black lowercase sm:text-sm">
-          {question.answers.map((answer) => (
-            <span
-              key={answer}
+      <div className="grid gap-3">
+        {question.answers.map((answer) => {
+          const isSelected = selectedOption === answer.option;
+
+          return (
+            <button
+              key={answer.option}
+              type="button"
+              onClick={() => setSelectedOption(answer.option)}
               className={
-                answer === selected
-                  ? "rounded-full bg-brand-purple px-3 py-2 text-brand-lavender-light"
-                  : "rounded-full bg-white/40 px-3 py-2"
+                isSelected
+                  ? "rounded-[1.5rem] border border-brand-purple bg-brand-purple px-5 py-4 text-left font-black lowercase text-brand-lavender-light shadow-[0_16px_34px_rgba(49,34,79,0.22)]"
+                  : "rounded-[1.5rem] border border-brand-purple/15 bg-white/45 px-5 py-4 text-left font-black lowercase transition hover:-translate-y-0.5 hover:bg-white/70"
               }
             >
-              {answer}
+              <span className="mr-3 inline-grid h-8 w-8 place-items-center rounded-full bg-brand-lavender-light text-sm text-brand-purple">
+                {answer.option}
+              </span>
+              {answer.text}
+            </button>
+          );
+        })}
+
+        <label
+          className={
+            customSelected
+              ? "rounded-[1.5rem] border border-brand-purple bg-white/70 px-5 py-4 shadow-[0_16px_34px_rgba(49,34,79,0.16)]"
+              : "rounded-[1.5rem] border border-brand-purple/15 bg-white/45 px-5 py-4 transition hover:-translate-y-0.5 hover:bg-white/70"
+          }
+        >
+          <div className="flex items-center gap-3">
+            <span className="inline-grid h-8 w-8 place-items-center rounded-full bg-brand-purple text-sm font-black lowercase text-brand-lavender-light">
+              d
             </span>
-          ))}
-        </div>
+            <span className="font-black lowercase">write my own answer</span>
+          </div>
+          <textarea
+            value={customText}
+            onFocus={() => setSelectedOption("custom")}
+            onChange={(event) => {
+              setSelectedOption("custom");
+              setCustomText(event.target.value);
+            }}
+            placeholder="tell mindrent what is actually happening..."
+            className="mt-4 min-h-24 w-full resize-none rounded-[1.2rem] border border-brand-purple/15 bg-brand-lavender-light/70 px-4 py-3 text-sm font-semibold lowercase leading-6 outline-none placeholder:text-brand-purple/45 focus:border-brand-purple/35"
+          />
+        </label>
       </div>
 
       <button
         type="button"
-        disabled={disabled}
+        disabled={!canContinue}
         onClick={() =>
           onAnswer({
             question: question.question,
-            answer: selected,
-            score,
+            answer: customSelected
+              ? customText.trim()
+              : (selected?.text ?? question.answers[0].text),
+            option: selectedOption,
+            kit: customSelected
+              ? branchFallbackKit[question.branch]
+              : (selected?.kit ?? question.answers[0].kit),
+            score:
+              selectedOption === "a"
+                ? 100
+                : selectedOption === "b"
+                  ? 70
+                  : selectedOption === "c"
+                    ? 40
+                    : 55,
           })
         }
         className="w-full rounded-full bg-brand-purple px-6 py-4 text-base font-black lowercase text-brand-lavender-light shadow-[0_16px_34px_rgba(49,34,79,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55"
       >
-        settle here
-      </button>
-    </div>
-  );
-}
-
-function PriorityAnswer({
-  question,
-  onAnswer,
-  disabled,
-}: {
-  question: QuizQuestion;
-  onAnswer: (answer: QuizAnswer) => void;
-  disabled: boolean;
-}) {
-  const [items, setItems] = useState<string[]>([...question.answers]);
-
-  return (
-    <div className="space-y-7">
-      <Reorder.Group
-        axis="y"
-        values={items}
-        onReorder={setItems}
-        className="space-y-3"
-      >
-        {items.map((item, index) => (
-          <Reorder.Item
-            key={item}
-            value={item}
-            className="cursor-grab rounded-[1.7rem] border border-brand-purple/15 bg-white/45 px-5 py-4 font-black lowercase shadow-[0_12px_30px_rgba(49,34,79,0.12)] active:cursor-grabbing"
-            whileDrag={{ scale: 1.03, rotate: index % 2 === 0 ? -1.5 : 1.5 }}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <span>{item}</span>
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-purple text-sm text-brand-lavender-light">
-                {index + 1}
-              </span>
-            </div>
-          </Reorder.Item>
-        ))}
-      </Reorder.Group>
-
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() =>
-          onAnswer({
-            question: question.question,
-            answer: items[0],
-            score: 100 - items.indexOf(items[0]) * 25,
-          })
-        }
-        className="w-full rounded-full bg-brand-purple px-6 py-4 text-base font-black lowercase text-brand-lavender-light shadow-[0_16px_34px_rgba(49,34,79,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55"
-      >
-        keep this order
+        continue
       </button>
     </div>
   );
@@ -350,7 +354,7 @@ function QuizCard({
         <div className="mb-8 flex items-start justify-between gap-5">
           <div className="min-w-0">
             <p className="text-sm font-black lowercase tracking-[0.2em]">
-              step {question.step} of {MAX_QUESTIONS}
+              {question.section} · step {question.step} of {MAX_QUESTIONS}
             </p>
             <h1 className="mt-3 text-3xl font-black lowercase leading-[0.98] sm:text-5xl">
               {question.question}
@@ -361,26 +365,16 @@ function QuizCard({
           </div>
         </div>
 
-        {question.inputMode === "priority" ? (
-          <PriorityAnswer
-            question={question}
-            onAnswer={onAnswer}
-            disabled={pending}
-          />
-        ) : (
-          <SliderAnswer
-            question={question}
-            onAnswer={onAnswer}
-            disabled={pending}
-          />
-        )}
+        <ChoiceAnswer
+          question={question}
+          onAnswer={onAnswer}
+          disabled={pending}
+        />
 
         <p className="mt-5 text-center text-sm font-bold lowercase opacity-75">
           {pending
-            ? "asking mindrent ai for the next gentle question..."
-            : question.inputMode === "priority"
-              ? "drag your strongest answer to the top"
-              : "slide until the answer feels closest"}
+            ? "scoring your answer gently..."
+            : "choose the answer that feels closest right now"}
         </p>
       </div>
     </motion.section>
@@ -504,7 +498,7 @@ function ProductCarousel({
                   {product.icon}
                 </span>
                 <span className="rounded-full border border-brand-purple/15 px-3 py-1 text-[0.62rem] font-black lowercase tracking-[0.16em] opacity-70">
-                  {product.category}
+                  {kitCategoryLabels[product.category]}
                 </span>
               </div>
 
@@ -581,7 +575,7 @@ function ProductReveal({
                 your ai recommendation
               </p>
               <h2 className="mt-3 text-3xl font-black lowercase leading-none sm:text-5xl">
-                {result.kit} kit
+                {kitDisplayNames[result.kit]}
               </h2>
               <p className="mt-4 text-base font-semibold leading-7 sm:text-lg">
                 {result.reasoning}
@@ -805,7 +799,7 @@ export function MindRentQuiz({ firstQuestion }: MindRentQuizProps) {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                {["5 questions max", "private server action", "one-time reset"].map(
+                {["10 questions max", "private scoring", "one-time reset"].map(
                   (note) => (
                     <div
                       key={note}

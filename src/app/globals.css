@@ -311,6 +311,140 @@ body::selection {
   animation: breathe-circle 4s ease-in-out infinite;
 }
 
+.sticky-quiz-cta {
+  animation: sticky-cta-reveal linear both;
+  animation-timeline: scroll(root);
+  animation-range: 12rem 26rem;
+  opacity: 0;
+  transform: translate3d(-50%, 1rem, 0) scale(0.96);
+}
+
+.home-spotlight {
+  position: absolute;
+  z-index: 0;
+  width: 34rem;
+  max-width: 80vw;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.64),
+    rgba(49, 34, 79, 0.1) 42%,
+    transparent 70%
+  );
+  filter: blur(18px);
+  opacity: 0.65;
+  pointer-events: none;
+  transform: translate3d(-50%, -50%, 0);
+  transition: left 0.18s ease-out, top 0.18s ease-out;
+}
+
+.home-hero-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -15% -28% 12%;
+  height: 11rem;
+  border: 1px solid rgba(49, 34, 79, 0.15);
+  border-radius: 999px;
+  transform: rotate(-5deg);
+}
+
+.home-line-field {
+  position: absolute;
+  inset: 6% -8% auto auto;
+  width: min(30rem, 78vw);
+  color: rgba(49, 34, 79, 0.18);
+  pointer-events: none;
+}
+
+.home-line-path {
+  stroke-dasharray: 780;
+  stroke-dashoffset: 780;
+  animation: home-line-draw 5.8s ease-in-out infinite;
+}
+
+.home-orbit-stage {
+  isolation: isolate;
+}
+
+.home-orbit-ring {
+  position: absolute;
+  left: 50%;
+  top: 39%;
+  width: 21rem;
+  aspect-ratio: 1;
+  border: 1px solid rgba(49, 34, 79, 0.18);
+  border-radius: 42% 58% 54% 46% / 45% 38% 62% 55%;
+  transform: translate(-50%, -50%);
+  animation: home-orbit 16s ease-in-out infinite;
+}
+
+.home-orbit-ring-two {
+  width: 15rem;
+  border-color: rgba(49, 34, 79, 0.12);
+  animation-delay: -5s;
+  animation-duration: 12s;
+}
+
+.home-kit-preview {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  z-index: 1;
+  display: grid;
+  width: min(15rem, calc(100% - 3rem));
+  min-height: 15rem;
+  place-content: center;
+  border: 1px solid rgba(49, 34, 79, 0.16);
+  border-radius: 2.4rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.3)),
+    rgba(248, 241, 251, 0.52);
+  box-shadow: 0 26px 70px rgba(49, 34, 79, 0.18);
+  padding: 1.5rem;
+  text-align: center;
+  transform: translate(-50%, -50%) rotate(-2deg);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.home-orbit-stage:hover .home-kit-preview {
+  box-shadow: 0 32px 90px rgba(49, 34, 79, 0.24);
+  transform: translate(-50%, -50%) rotate(0deg) scale(1.02);
+}
+
+.home-marquee {
+  animation: home-marquee 28s linear infinite;
+}
+
+.home-answer-card,
+.home-step-card {
+  backdrop-filter: blur(20px);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.home-answer-card:hover,
+.home-step-card:hover {
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 22px 54px rgba(49, 34, 79, 0.14);
+  transform: translateY(-0.28rem);
+}
+
+.home-path {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-path::after {
+  content: "";
+  position: absolute;
+  inset: -45% auto auto 48%;
+  width: 28rem;
+  aspect-ratio: 1;
+  border: 1px solid rgba(248, 241, 251, 0.18);
+  border-radius: 999px;
+  transform: rotate(12deg);
+}
+
 .mind-slider {
   width: 100%;
   appearance: none;
@@ -493,6 +627,52 @@ body::selection {
 
   50% {
     transform: scale(1.05);
+  }
+}
+
+@keyframes sticky-cta-reveal {
+  to {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+}
+
+@keyframes home-line-draw {
+  0%,
+  12% {
+    stroke-dashoffset: 780;
+  }
+
+  52%,
+  72% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: -780;
+  }
+}
+
+@keyframes home-orbit {
+  0%,
+  100% {
+    border-radius: 42% 58% 54% 46% / 45% 38% 62% 55%;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  50% {
+    border-radius: 56% 44% 38% 62% / 61% 46% 54% 39%;
+    transform: translate(-50%, -50%) rotate(8deg) scale(1.04);
+  }
+}
+
+@keyframes home-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
   }
 }
 

@@ -57,7 +57,7 @@ export default function TodayPage() {
             </div>
           </Link>
           <Link
-            href="/"
+            href="/quiz"
             className="rounded-full border border-brand-purple/15 bg-white/35 px-4 py-2 text-sm font-black lowercase transition hover:bg-brand-purple hover:text-brand-lavender-light"
           >
             quiz
